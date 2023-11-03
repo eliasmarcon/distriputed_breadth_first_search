@@ -1,10 +1,13 @@
-EXECS=mpi_bfs
+EXECS=mpi_distributed_bfs
 MPICC?=mpicc.mpich
 
 all: ${EXECS}
 
-mpi_bfs: BFS.c
-	${MPICC} -o mpi_bfs FloodMax.c
+mpi_distributed_bfs: src/distributed_bfs.c
+	${MPICC} -o out/mpi_distributed_bfs src/distributed_bfs.c
+
+mpi_bfs: src/binarytree_bfs.c
+	${MPICC} -o out/mpi_bfs src/binarytree_bfs.c
 
 clean:
 	rm -f ${EXECS}
