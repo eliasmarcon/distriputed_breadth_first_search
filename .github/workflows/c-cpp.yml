@@ -18,12 +18,8 @@ jobs:
         sudo apt-get install -y mpich
       shell: bash
     - uses: actions/checkout@v3
-    - name: create out directory
-      run: |
-        mkdir out
-      shell: bash
     - name: make
-      run: make
+      run: make all
     - name: Copy binaries and ReadMe
       run: |
         mkdir artifacts
@@ -34,6 +30,6 @@ jobs:
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v2
       with:
-        name: FloodMax
+        name: BFS
         path: "artifacts"
 
