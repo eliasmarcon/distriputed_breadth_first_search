@@ -29,11 +29,21 @@ int main(int argc, char *argv[])
 
     // ---
 
-    // Define a simple graph topology.
-    // For instance, a triangle graph where each node is connected to the other two.
+    //  0
+    //  / \
+//1---2
+
     int n = 3;                         // Number of nodes
     int index[3] = {2, 4, 6};          // Cumulative degree of nodes
     int edges[6] = {1, 2, 0, 2, 0, 1}; // Edges in the graph
+
+    //   0
+    //  / \
+// 1   2
+
+    int n = 3;                   // Number of nodes
+    int index[3] = {2, 3, 4};    // Cumulative degree of nodes
+    int edges[4] = {1, 2, 0, 0}; // Edges in the graph
 
     // Create a graph communicator based on the topology
     MPI_Comm graph_comm;

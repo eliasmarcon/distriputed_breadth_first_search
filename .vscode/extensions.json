@@ -1,0 +1,11 @@
+{
+    "recommendations": [
+        "bierner.markdown-mermaid",
+        "jeff-hykin.better-cpp-syntax",
+        "ms-vscode.cpptools-extension-pack",
+        "ms-vsliveshare.vsliveshare",
+        "ms-vscode.makefile-tools",
+        "yzhang.markdown-all-in-one",
+        "davidanson.vscode-markdownlint"
+    ]
+}
