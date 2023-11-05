@@ -6,6 +6,8 @@
         "ms-vsliveshare.vsliveshare",
         "ms-vscode.makefile-tools",
         "yzhang.markdown-all-in-one",
-        "davidanson.vscode-markdownlint"
+        "davidanson.vscode-markdownlint",
+        "znck.grammarly",
+        "gruntfuggly.todo-tree"
     ]
 }

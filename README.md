@@ -1,5 +1,24 @@
 # distriputed_breadth_first_search
 
+Implement a distributed breadth-first search algorithm in MPI, to find the diameter of a graph.
+
+## Flow chart of DBFS
+
+```mermaid
+flowchart LR
+Root --1. Send Visited--> Node
+Root --2. Start Receive--> Root
+Node --3. Send Visited--> Leaf-1
+Node --4. Start Receive--> Node
+
+Leaf-1 --5. Notify Structure--> Node
+Node --6. Received--> Node
+Node --7. Notify Structure--> Root
+Root --8. Received--> Root
+
+
+```
+
 ## Authors
 
 - Elias Marcon MSc. | [@eliasmarcon](https://github.com/eliasmarcon)
@@ -35,6 +54,19 @@ int edges[4] = {1, 2, 0, 0}; // Edges in the graph
 
 ```
 
+```mermaid
+graph TD
+    0 --- 1
+    0 --- 2
+    1 --- 2
+```
+
+```mermaid
+graph TD
+    0 --- 1
+    0 --- 2
+```
+
 ### Further trees/examples
 
 #### 5 nodes
@@ -42,7 +74,12 @@ int edges[4] = {1, 2, 0, 0}; // Edges in the graph
 ```c
 int n = 5; // Number of nodes
 int index[5] = {3, 5, 7, 10, 12}; // Cumulative degree of nodes
-int edges[12] = {1, 2, 3, 0, 4, 0, 3, 0, 2, 4, 1, 3}; // Edges in the graph
+int edges[10] = {
+    1, 2, 3,
+    0, 4,
+    0,
+    0, 4
+    1, 3}; // Edges in the graph
 ```
 
 ```c
@@ -95,7 +132,6 @@ graph TD;
     9 --- 0
     6 --- 5
     7 --- 4
-
 ```
 
 #### 15 nodes
@@ -139,8 +175,8 @@ graph TD
     0 --- 3
     1 --- 4
     1 --- 5
-    2 --- 3
     2 --- 5
+    2 --- 3
     5 --- 6
     6 --- 7
     7 --- 9
