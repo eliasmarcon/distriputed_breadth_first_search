@@ -1,0 +1,39 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-20.04
+
+    steps:
+    - name: Set up MPI environment
+      run: |
+        sudo apt-get update -q
+        sudo apt-get install -y mpich
+      shell: bash
+    - uses: actions/checkout@v3
+    - name: create out directory
+      run: |
+        mkdir out
+      shell: bash
+    - name: make
+      run: make
+    - name: Copy binaries and ReadMe
+      run: |
+        mkdir artifacts
+        cp out/* artifacts/
+        cp Makefile artifacts/
+        cp ReadMe.md artifacts/
+      shell: bash
+    - name: Upload a Build Artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: FloodMax
+        path: "artifacts"
+

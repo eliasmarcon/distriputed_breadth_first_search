@@ -1,4 +1,4 @@
-EXECS=mpi_distributed_bfs
+EXECS=mpi_distributed_bfs mpi_bfs mpi_nontrivial_tree
 MPICC?=mpicc.mpich
 
 # Define the output directory
@@ -10,11 +10,14 @@ $(OUTDIR):
 
 all: ${EXECS}
 
-mpi_distributed_bfs: src/distributed_bfs.c
-	${MPICC} -o out/mpi_distributed_bfs src/distributed_bfs.c
+mpi_distributed_bfs: $(OUTDIR) src/distributed_bfs.c
+	${MPICC} -o $(OUTDIR)/mpi_distributed_bfs src/distributed_bfs.c
 
-mpi_bfs: src/binarytree_bfs.c
-	${MPICC} -o out/mpi_bfs src/binarytree_bfs.c
+mpi_bfs: $(OUTDIR) src/binarytree_bfs.c
+	${MPICC} -o $(OUTDIR)/mpi_bfs src/binarytree_bfs.c
+
+mpi_nontrivial_tree: $(OUTDIR) src/nontrivial_tree.c
+	${MPICC} -o $(OUTDIR)/mpi_nontrivial_tree src/nontrivial_tree.c
 
 clean:
-	rm -f ${EXECS}
+	rm -f $(OUTDIR)/*
