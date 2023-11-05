@@ -1,0 +1,7 @@
+{
+    "editor.formatOnSave": true,
+    "files.associations": {
+        "stdbool.h": "c"
+    },
+    "C_Cpp.default.compilerPath": "/usr/bin/mpicc"
+}
