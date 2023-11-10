@@ -1,6 +1,13 @@
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <mpi.h>
+
+struct ArrayList
+{
+    int size;
+    int *list;
+};
 
 struct Graph
 {
@@ -12,7 +19,7 @@ struct Graph
 struct Graph *getGraph(int nodes)
 {
 
-    struct Graph *graph = (int *)malloc(sizeof(struct Graph));
+    struct Graph *graph = malloc(sizeof(struct Graph));
     if (nodes != 5 && nodes != 10 && nodes != 15)
     {
         // choose nearest graph size
@@ -31,45 +38,19 @@ struct Graph *getGraph(int nodes)
     }
     graph->nodeAmount = nodes;
 
-    // Check if memory allocation was successful
-    if (graph->index == NULL || graph->edges_array == NULL)
-    {
-        fprintf(stderr, "Memory allocation failed.\n");
-        exit(EXIT_FAILURE);
-    }
-
     // Populate the index and edges_array for the 5-node graph
     // Allocate memory for index array
-    graph->index = (int *)malloc(nodes * sizeof(int));
+    graph->index = calloc(nodes, sizeof(int));
     if (nodes == 5)
     {
-        // Allocate memory for index and edges_array
-        graph->edges_array = (int *)malloc(10 * sizeof(int)); // 10 edges for the 5-node graph
-        graph->index[0] = 3;
-        graph->index[1] = 5;
-        graph->index[2] = 7;
-        graph->index[3] = 9;
-        graph->index[4] = 10;
 
-        // Node 0
-        graph->edges_array[0] = 1;
-        graph->edges_array[1] = 2;
-        graph->edges_array[2] = 3;
+        // // Allocate memory for index and edges_array
+        graph->edges_array = (int *)malloc(8 * sizeof(int)); // 10 edges for the 5-node graph
+        int index[5] = {1, 3, 5, 7, 8};
+        int edges[8] = {1, 0, 2, 1, 3, 2, 4, 3};
 
-        // Node 1
-        graph->edges_array[3] = 0;
-        graph->edges_array[4] = 4;
-
-        // Node 2
-        graph->edges_array[5] = 0;
-
-        // Node 3
-        graph->edges_array[6] = 0;
-        graph->edges_array[7] = 4;
-
-        // Node 4
-        graph->edges_array[8] = 1;
-        graph->edges_array[9] = 3;
+        memcpy(graph->index, &index, sizeof(index));
+        memcpy(graph->edges_array, &edges, sizeof(edges));
     }
     else if (nodes == 10)
     {
@@ -105,64 +86,139 @@ struct Graph *getGraph(int nodes)
         memcpy(graph->edges_array, edges, sizeof(edges));
     }
 
+    // Check if memory allocation was successful
+    if (graph->index == NULL || graph->edges_array == NULL)
+    {
+        printf("Memory allocation failed.\n");
+        exit(EXIT_FAILURE);
+    }
     return graph;
 }
 
-int *mergeLists(int *list1, int *list2, int size1, int size2)
+struct ArrayList *mergeLists(struct ArrayList *list1, struct ArrayList *list2)
 {
-    int *mergedList = calloc(size1 + size2, sizeof(int));
-    memcpy(mergedList, list1, size1 * sizeof(int));
-    memcpy(mergedList + size1, list2, size2 * sizeof(int));
+    int size1 = list1->size;
+    int size2 = list2->size;
+    int newSize = size1 + size2;
+    int *mergedList = malloc(newSize * sizeof(int));
+    memcpy(mergedList, list1->list, size1 * sizeof(int));
+    memcpy(mergedList + size1, list2->list, size2 * sizeof(int));
+    free(list2);
     free(list1);
-    // list2 is implicitly allocated by MPI
-    MPI_Free_mem(list2);
-    return mergedList;
+    struct ArrayList *new = malloc(sizeof(struct ArrayList));
+    new->list = mergedList;
+    new->size = newSize;
+    return new;
 }
 
-void notifyNeighbours(int *neighbors, int n_neighbors, int *visited, MPI_Comm graph_comm)
+// char *toString(struct ArrayList *list)
+// {
+//     char *str = malloc(sizeof(char) * list->size * 2);
+//     for (int i = 0; i < list->size; i++)
+//     {
+//         str[i * 2] = (char)list->list[i];
+//         str[i * 2 + 1] = ',';
+//     }
+//     str[list->size * 2 - 1] = '\0';
+//     return str;
+// }
+
+char *toString(struct ArrayList *list)
 {
-    // TODO: Distribute depth and max depth to neighbors
-    char comp[6] = {'A', 'C', 'K', ':', '0', '\0'};
-    for (int i = 1; i < n_neighbors + 1; i++)
+    // Initial estimate for string size
+    int estimatedSize = 1; // Start with 1 for the null terminator
+    for (int i = 0; i < list->size; i++)
     {
-        MPI_send(n_neighbors + 1, 1, MPI_INT, neighbors[i], 0, graph_comm);
-        // recieve ACK:<number> || DEC:0
-        comp[4] = (char)(n_neighbors + 1);
-        char recieveBuffer[6];
-        MPI_Recv(&recieveBuffer, 6, MPI_CHAR, neighbors[i], 0, graph_comm, MPI_STATUS_IGNORE);
-        // compare strings
-        if (strcmp(&recieveBuffer, &comp) == 0)
+        estimatedSize += snprintf(NULL, 0, "%d,", list->list[i]);
+    }
+
+    char *str = malloc(sizeof(char) * estimatedSize);
+    if (!str)
+    {
+        return NULL; // Return NULL if memory allocation fails
+    }
+
+    char *current = str;
+    for (int i = 0; i < list->size; i++)
+    {
+        current += sprintf(current, "%d,", list->list[i]);
+    }
+
+    if (list->size > 0)
+    {
+        current[-1] = '\0'; // Replace the last comma with a null terminator
+    }
+    else
+    {
+        *str = '\0';
+    }
+
+    return str;
+}
+
+int inList(int value, struct ArrayList *list)
+{
+    for (int i = 0; i < list->size; i++)
+        if (list->list[i] == value)
+            return 1;
+    return 0;
+}
+
+void notifyNeighbours(struct ArrayList *neighbors, struct ArrayList *visited, MPI_Comm *graph_comm, int *depth)
+{
+    char comp[6] = {'A', 'C', 'K', ':', '0', '\0'};
+    for (int i = 0; i < neighbors->size; i++)
+    {
+        if (inList(neighbors->list[i], visited))
         {
-            printf("ACK recieved from %d\n", neighbors[i]);
+            continue;
+        }
+        printf("Notifying %d\n", (neighbors->list[i]));
+        int visitedSize = neighbors->size + 1;
+        MPI_Send(&visitedSize, 1, MPI_INT, neighbors->list[i], 0, *graph_comm);
+        // recieve ACK:<number> || DEC:0
+        comp[4] = (char)(neighbors->size + 1);
+        char recieveBuffer[6];
+        MPI_Recv(&recieveBuffer, 6, MPI_CHAR, neighbors->list[i], 0, *graph_comm, MPI_STATUS_IGNORE);
+        // compare strings
+        if (strcmp((const char *)&recieveBuffer, (const char *)&comp) == 0)
+        {
+            printf("ACK recieved from %d\n", neighbors->list[i]);
         }
         else
         {
-            printf("ERROR: ACK not recieved from %d\n", neighbors[i]);
+            printf("ERROR: ACK not recieved from %d\n", neighbors->list[i]);
         }
-        MPI_send(&visited, n_neighbors + 1, MPI_INT, neighbors[i], 0, graph_comm);
+        MPI_Send(visited->list, neighbors->size + 1, MPI_INT, neighbors->list[i], 0, *graph_comm);
+        // Distribute depth to neighbors
+        int newdepth = *depth + 1;
+        MPI_Send(&newdepth, 1, MPI_INT, neighbors->list[i], 0, *graph_comm);
     }
 }
 
-int receiveFromParent(int *neighbors, int n_neighbors, MPI_Comm graph_comm, int rank, int *visited)
+int receiveFromParent(struct ArrayList *neighbors, MPI_Comm *graph_comm, int rank, struct ArrayList *visited, int *depth)
 {
-    int parentVisitedSize = 0;
     MPI_Status status;
 
-    MPI_Request request[n_neighbors + 1];
-
     // recieve neighbour array sizefrom parent
-    MPI_recv(&parentVisitedSize, 1, MPI_INT, MPI_ANY_SOURCE, 0, graph_comm, &status);
-
+    MPI_Recv(&visited->size, 1, MPI_INT, MPI_ANY_SOURCE, 0, *graph_comm, &status);
+    printf("Rank: %d, Recieved size: %d\n", rank, visited->size);
     // send ack to parent
     char ack[6] = {'A', 'C', 'K', ':', '0', '\0'};
-    ack[4] = (char)parentVisitedSize;
+    ack[4] = (char)visited->size;
     int parentRank = status.MPI_SOURCE;
-    MPI_send(&ack, 6, MPI_CHAR, parentRank, 0, graph_comm);
+    MPI_Send(&ack, 6, MPI_CHAR, parentRank, 0, *graph_comm);
 
     // visited = calloc(parentVisitedSize, sizeof(int));
 
     // recieve neighbour array from parent
-    MPI_recv(visited, parentVisitedSize, MPI_INT, parentRank, 0, graph_comm, MPI_STATUS_IGNORE);
+    MPI_Recv(visited->list, visited->size, MPI_INT, parentRank, 0, *graph_comm, MPI_STATUS_IGNORE);
+    char *str = toString(visited);
+    printf("Rank: %d, Recieved visited: %s\n", rank, str);
+    free(str);
+    // recieve depth from parent
+    MPI_Recv(depth, 1, MPI_INT, parentRank, 0, *graph_comm, MPI_STATUS_IGNORE);
+    printf("Rank: %d, Recieved depth: %d\n", rank, *depth);
     return parentRank == rank ? -1 : parentRank;
 }
 
@@ -170,46 +226,60 @@ int *distributedBFS(MPI_Comm *graph_comm, int rank, int size, int bfsdepth)
 {
     // -------------  Prepare Structures --------------------------
     MPI_Request request;
+    int depth = 0;
 
     // Get the number of neighbors for the current node
     int n_neighbors;
-    MPI_Graph_neighbors_count(graph_comm, rank, &n_neighbors);
+    MPI_Graph_neighbors_count(*graph_comm, rank, &n_neighbors);
 
     // Get the neighbors
-    int *neighbors;
-    MPI_Graph_neighbors(graph_comm, rank, n_neighbors, neighbors);
-    int *visited = calloc(n_neighbors + 1, sizeof(int));
-    // mark ourselves as visited
-    visited[0] = rank;
-    int *recData = calloc(n_neighbors + 1, sizeof(int));
+    int *neighbors = malloc(n_neighbors * sizeof(int));
+    MPI_Graph_neighbors(*graph_comm, rank, n_neighbors, neighbors);
 
-    for (int i = 1; i < n_neighbors + 1; i++)
-    {
-        // mark neighbors as visited
-        visited[i] = neighbors[i];
-    }
+    struct ArrayList *neighborsList = malloc(sizeof(struct ArrayList));
+    neighborsList->size = n_neighbors;
+    neighborsList->list = neighbors;
+    // Calculate visited members
+    struct ArrayList *visited = malloc(sizeof(struct ArrayList));
+    visited->size = n_neighbors + 1;
+    visited->list = calloc(n_neighbors + 1, sizeof(int));
+    // mark ourselves as visited
+    visited->list[0] = rank;
+    // mark neighbors as visited
+    printf("Rank: %d, n_neighbors: %d\n", rank, n_neighbors);
     int parent;
     if (rank == 0)
     {
-        notifyNeighbours(neighbors, n_neighbors, visited, graph_comm);
+        notifyNeighbours(neighborsList, visited, graph_comm, &depth);
         parent = -1;
     }
     else
     {
-        int *visitedParent;
-        parent = receiveFromParent(neighbors, n_neighbors, graph_comm, rank, visitedParent);
+        memcpy(visited->list + 1, neighbors, n_neighbors * sizeof(int));
+        struct ArrayList *visitedParent = malloc(sizeof(struct ArrayList));
+        visitedParent->size = 0;
+        parent = receiveFromParent(neighborsList, graph_comm, rank, visitedParent, &depth);
         // merge lists
-        visited = mergeLists(visited, visitedParent, n_neighbors + 1, sizeof(visitedParent) / sizeof(int));
+        char *str1 = toString(visitedParent);
+        char *str2 = toString(visited);
+        printf("Rank: %d, visitedParent: %s, visited: %s\n", rank, str1, str2);
+        free(str1);
+        free(str2);
+
+        printf("Rank: %d has Parent: %d\n", rank, parent);
+        visited = mergeLists(visitedParent, visited);
+        char *str = toString(visited);
+        printf("Parent: %d, Rank: %d, visited: %s\n", parent, rank, str);
+        free(str);
         // TODO: only use BFS if depth is not reached
-        notifyNeighbours(neighbors, n_neighbors, visited, graph_comm);
+        notifyNeighbours(neighborsList, visited, graph_comm, &depth);
     }
     // --------------------- start recieving ------------------------
 
     // TODO: Notify Structure (see flow chart)
     //  Don't forget to free the memory allocated for 'neighbors' after you're done.
     // TODO: 8. Recieve from children(see flow chart)
-    MPI_Free_mem(neighbors);
-    free(recData);
+    free(neighbors);
 }
 
 int main(int argc, char *argv[])
@@ -228,11 +298,11 @@ int main(int argc, char *argv[])
     {
         bfsdepth = 2;
     }
-    const struct Graph *graph = getGraph(size);
+    struct Graph *graph = getGraph(size);
 
     // Create a graph communicator based on the topology
     MPI_Comm graph_comm;
-    MPI_Graph_create(MPI_COMM_WORLD, graph->nodeAmount, *(graph->index), *(graph->edges_array), 0, &graph_comm);
+    MPI_Graph_create(MPI_COMM_WORLD, graph->nodeAmount, (graph->index), (graph->edges_array), 0, &graph_comm);
 
     // ---
     // Perform BFS
