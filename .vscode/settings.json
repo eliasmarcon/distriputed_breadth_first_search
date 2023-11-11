@@ -1,5 +1,25 @@
 {
+    "editor.wordWrap": "on",
     "editor.formatOnSave": true,
+    "liveshare.languages.allowGuestCommandControl": true,
+    "todo-tree.general.tags": [
+        "BUG",
+        "HACK",
+        "FIXME",
+        "TODO",
+        "TEST"
+    ],
+    "todo-tree.highlights.customHighlight": {
+        "TEST": {
+            "icon": "checklist",
+            "type": "line",
+            "iconColour": "cyan"
+        },
+        "FIXME": {
+            "type": "tag-and-subTag",
+            "iconColour": "red"
+        }
+    },
     "files.associations": {
         "stdbool.h": "c"
     },

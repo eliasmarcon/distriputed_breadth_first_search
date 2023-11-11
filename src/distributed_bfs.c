@@ -100,6 +100,8 @@ struct ArrayList *mergeLists(struct ArrayList *list1, struct ArrayList *list2)
     int size1 = list1->size;
     int size2 = list2->size;
     int newSize = size1 + size2;
+    printf("Merging lists of size %d and %d\n", size1, size2);
+    printf("New size: %d\n", newSize);
     int *mergedList = malloc(newSize * sizeof(int));
     memcpy(mergedList, list1->list, size1 * sizeof(int));
     memcpy(mergedList + size1, list2->list, size2 * sizeof(int));
@@ -166,7 +168,7 @@ int inList(int value, struct ArrayList *list)
 
 void notifyNeighbours(struct ArrayList *neighbors, struct ArrayList *visited, MPI_Comm *graph_comm, int *depth)
 {
-    char comp[6] = {'A', 'C', 'K', ':', '0', '\0'};
+    char comp[6];
     for (int i = 0; i < neighbors->size; i++)
     {
         if (inList(neighbors->list[i], visited))
@@ -174,10 +176,9 @@ void notifyNeighbours(struct ArrayList *neighbors, struct ArrayList *visited, MP
             continue;
         }
         printf("Notifying %d\n", (neighbors->list[i]));
-        int visitedSize = neighbors->size + 1;
-        MPI_Send(&visitedSize, 1, MPI_INT, neighbors->list[i], 0, *graph_comm);
+        MPI_Send(&(visited->size), 1, MPI_INT, neighbors->list[i], 0, *graph_comm);
         // recieve ACK:<number> || DEC:0
-        comp[4] = (char)(neighbors->size + 1);
+        sprintf(comp, "ACK:%d", visited->size);
         char recieveBuffer[6];
         MPI_Recv(&recieveBuffer, 6, MPI_CHAR, neighbors->list[i], 0, *graph_comm, MPI_STATUS_IGNORE);
         // compare strings
@@ -188,8 +189,13 @@ void notifyNeighbours(struct ArrayList *neighbors, struct ArrayList *visited, MP
         else
         {
             printf("ERROR: ACK not recieved from %d\n", neighbors->list[i]);
+            printf("Recieved: %s\n", recieveBuffer);
         }
-        MPI_Send(visited->list, neighbors->size + 1, MPI_INT, neighbors->list[i], 0, *graph_comm);
+        char *str = toString(visited);
+        if (*depth > 1)
+            printf("send visited: %s, size: %d\n", str, visited->size);
+        free(str);
+        MPI_Send(visited->list, visited->size, MPI_INT, neighbors->list[i], 0, *graph_comm);
         // Distribute depth to neighbors
         int newdepth = *depth + 1;
         MPI_Send(&newdepth, 1, MPI_INT, neighbors->list[i], 0, *graph_comm);
@@ -201,24 +207,24 @@ int receiveFromParent(struct ArrayList *neighbors, MPI_Comm *graph_comm, int ran
     MPI_Status status;
 
     // recieve neighbour array sizefrom parent
-    MPI_Recv(&visited->size, 1, MPI_INT, MPI_ANY_SOURCE, 0, *graph_comm, &status);
-    printf("Rank: %d, Recieved size: %d\n", rank, visited->size);
-    // send ack to parent
-    char ack[6] = {'A', 'C', 'K', ':', '0', '\0'};
-    ack[4] = (char)visited->size;
+    MPI_Recv(&(visited->size), 1, MPI_INT, MPI_ANY_SOURCE, 0, *graph_comm, &status);
+    // printf("Rank: %d, Recieved size: %d\n", rank, visited->size);
+
+    char ack[6];
+    sprintf(ack, "ACK:%d", visited->size);
     int parentRank = status.MPI_SOURCE;
+    // printf("Rank: %d, Sending ACK: '%s' to %d\n", rank, ack, parentRank);
     MPI_Send(&ack, 6, MPI_CHAR, parentRank, 0, *graph_comm);
 
     // visited = calloc(parentVisitedSize, sizeof(int));
 
-    // recieve neighbour array from parent
+    // recieve visited array from parent
+    printf("Rank: %d, Reicieving size: %d\n", rank, visited->size);
     MPI_Recv(visited->list, visited->size, MPI_INT, parentRank, 0, *graph_comm, MPI_STATUS_IGNORE);
-    char *str = toString(visited);
-    printf("Rank: %d, Recieved visited: %s\n", rank, str);
-    free(str);
+    printf("Rank: %d, Recieved visited: %s\n", rank, toString(visited));
     // recieve depth from parent
     MPI_Recv(depth, 1, MPI_INT, parentRank, 0, *graph_comm, MPI_STATUS_IGNORE);
-    printf("Rank: %d, Recieved depth: %d\n", rank, *depth);
+    // printf("Rank: %d, Recieved depth: %d\n", rank, *depth);
     return parentRank == rank ? -1 : parentRank;
 }
 
@@ -241,12 +247,12 @@ int *distributedBFS(MPI_Comm *graph_comm, int rank, int size, int bfsdepth)
     neighborsList->list = neighbors;
     // Calculate visited members
     struct ArrayList *visited = malloc(sizeof(struct ArrayList));
-    visited->size = n_neighbors + 1;
-    visited->list = calloc(n_neighbors + 1, sizeof(int));
+    visited->size = 1;
+    visited->list = calloc(1, sizeof(int));
     // mark ourselves as visited
     visited->list[0] = rank;
     // mark neighbors as visited
-    printf("Rank: %d, n_neighbors: %d\n", rank, n_neighbors);
+    // printf("Rank: %d, n_neighbors: %d\n", rank, n_neighbors);
     int parent;
     if (rank == 0)
     {
@@ -255,24 +261,27 @@ int *distributedBFS(MPI_Comm *graph_comm, int rank, int size, int bfsdepth)
     }
     else
     {
-        memcpy(visited->list + 1, neighbors, n_neighbors * sizeof(int));
+        // memcpy(visited->list + 1, neighbors, n_neighbors * sizeof(int));
         struct ArrayList *visitedParent = malloc(sizeof(struct ArrayList));
         visitedParent->size = 0;
         parent = receiveFromParent(neighborsList, graph_comm, rank, visitedParent, &depth);
-        // merge lists
-        char *str1 = toString(visitedParent);
-        char *str2 = toString(visited);
-        printf("Rank: %d, visitedParent: %s, visited: %s\n", rank, str1, str2);
-        free(str1);
-        free(str2);
-
-        printf("Rank: %d has Parent: %d\n", rank, parent);
+        // printf("Rank: %d has Parent: %d\n", rank, parent);
+        //  merge lists
         visited = mergeLists(visitedParent, visited);
         char *str = toString(visited);
-        printf("Parent: %d, Rank: %d, visited: %s\n", parent, rank, str);
+        printf("Parent: %d, Rank: %d, depth: %d, visited: %s\n", parent, rank, depth, str);
         free(str);
-        // TODO: only use BFS if depth is not reached
-        notifyNeighbours(neighborsList, visited, graph_comm, &depth);
+        // only use BFS if depth is not reached
+        if (depth < bfsdepth)
+        {
+            notifyNeighbours(neighborsList, visited, graph_comm, &depth);
+        }
+        else
+        {
+            printf("ERROR: Not implemented yet\n");
+            // notifyNeighbours(neighborsList, visited, graph_comm, &depth);
+            //  TODO: do DFS
+        }
     }
     // --------------------- start recieving ------------------------
 
@@ -293,6 +302,8 @@ int main(int argc, char *argv[])
     if (argc > 1)
     {
         bfsdepth = atoi(argv[1]);
+        if (rank == 0)
+            printf("Setting depth to %d\n", bfsdepth);
     }
     else
     {
