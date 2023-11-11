@@ -216,7 +216,7 @@ int receiveFromParent(struct ArrayList *neighbors, MPI_Comm *graph_comm, int ran
     // printf("Rank: %d, Sending ACK: '%s' to %d\n", rank, ack, parentRank);
     MPI_Send(&ack, 6, MPI_CHAR, parentRank, 0, *graph_comm);
 
-    // visited = calloc(parentVisitedSize, sizeof(int));
+    visited->list = calloc(visited->size, sizeof(int));
 
     // recieve visited array from parent
     printf("Rank: %d, Reicieving size: %d\n", rank, visited->size);
@@ -263,7 +263,6 @@ int *distributedBFS(MPI_Comm *graph_comm, int rank, int size, int bfsdepth)
     {
         // memcpy(visited->list + 1, neighbors, n_neighbors * sizeof(int));
         struct ArrayList *visitedParent = malloc(sizeof(struct ArrayList));
-        visitedParent->size = 0;
         parent = receiveFromParent(neighborsList, graph_comm, rank, visitedParent, &depth);
         // printf("Rank: %d has Parent: %d\n", rank, parent);
         //  merge lists
