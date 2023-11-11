@@ -1,207 +1,189 @@
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include "Graph.h"
+#include "ArrayList.h"
 #include <mpi.h>
 
-struct ArrayList
+void notifyNeighbour(int neighborRank, struct ArrayList *visited, MPI_Comm *graph_comm, int *depth);
+void notifyNeighbours(struct ArrayList *neighbors, struct ArrayList *visited, MPI_Comm *graph_comm, int *depth);
+void notifyParent(int parentRank, struct ArrayList *visited, MPI_Comm *graph_comm);
+void receiveFromChild(int childRank, struct ArrayList *visited, MPI_Comm *graph_comm);
+void receiveFromChildren(struct ArrayList *neighbors, MPI_Comm *graph_comm, int rank, struct ArrayList *visited, int *depth);
+int receiveFromParent(struct ArrayList *neighbors, MPI_Comm *graph_comm, int rank, struct ArrayList *visited, int *depth);
+void DFS(struct ArrayList *neighbors, MPI_Comm *graph_comm, int rank, int size, int bfsdepth, struct ArrayList *visited, int *depth);
+int *distributedBFS(MPI_Comm *graph_comm, int rank, int size, int bfsdepth);
+
+/**
+ * Notifies a neighbor process of the current depth level and the visited nodes.
+ *
+ * @param neighborRank The rank of the neighbor process to notify.
+ * @param visited The list of visited nodes.
+ * @param graph_comm The MPI communicator for the graph.
+ * @param depth The current depth level.
+ */
+void notifyNeighbour(int neighborRank, struct ArrayList *visited, MPI_Comm *graph_comm, int *depth)
 {
-    int size;
-    int *list;
-};
-
-struct Graph
-{
-    int nodeAmount;
-    int *index;
-    int *edges_array;
-};
-
-struct Graph *getGraph(int nodes)
-{
-
-    struct Graph *graph = malloc(sizeof(struct Graph));
-    if (nodes != 5 && nodes != 10 && nodes != 15)
+    char comp[6];
+    printf("Notifying %d\n", (neighborRank));
+    MPI_Send(&(visited->size), 1, MPI_INT, neighborRank, 0, *graph_comm);
+    // recieve ACK:<number> || DEC:0
+    sprintf(comp, "ACK:%d", visited->size);
+    char recieveBuffer[6];
+    MPI_Recv(&recieveBuffer, 6, MPI_CHAR, neighborRank, 0, *graph_comm, MPI_STATUS_IGNORE);
+    // compare strings
+    if (strcmp((const char *)&recieveBuffer, (const char *)&comp) == 0)
     {
-        // choose nearest graph size
-        if (nodes < 5)
-        {
-            nodes = 5;
-        }
-        else if (nodes < 10)
-        {
-            nodes = 10;
-        }
-        else
-        {
-            nodes = 15;
-        }
-    }
-    graph->nodeAmount = nodes;
-
-    // Populate the index and edges_array for the 5-node graph
-    // Allocate memory for index array
-    graph->index = calloc(nodes, sizeof(int));
-    if (nodes == 5)
-    {
-
-        // // Allocate memory for index and edges_array
-        graph->edges_array = (int *)malloc(8 * sizeof(int)); // 10 edges for the 5-node graph
-        int index[5] = {1, 3, 5, 7, 8};
-        int edges[8] = {1, 0, 2, 1, 3, 2, 4, 3};
-
-        memcpy(graph->index, &index, sizeof(index));
-        memcpy(graph->edges_array, &edges, sizeof(edges));
-    }
-    else if (nodes == 10)
-    {
-        // Allocate memory for index and edges_array
-        graph->edges_array = (int *)malloc(20 * sizeof(int));                         // 10 edges for the 5-node graph
-        int index[10] = {2, 4, 6, 8, 10, 12, 14, 16, 18, 20};                         // Cumulative degree of nodes
-        int edges[20] = {1, 2, 0, 3, 1, 4, 2, 5, 3, 6, 4, 7, 5, 8, 6, 9, 7, 0, 8, 1}; // Edges in the graph
-        memcpy(graph->index, index, sizeof(index));
-        memcpy(graph->edges_array, edges, sizeof(edges));
-    }
-    else if (nodes == 15)
-    {
-        graph->edges_array = (int *)malloc(34 * sizeof(int));                      // 10 edges for the 5-node graph
-        int index[15] = {3, 5, 8, 10, 12, 14, 16, 19, 22, 24, 26, 28, 30, 32, 34}; // Cumulative degree of nodes
-        int edges[34] = {
-            1, 2, 3,   // Node 0
-            0, 4,      // Node 1
-            0, 3, 5,   // Node 2
-            0, 2,      // Node 3
-            1, 5,      // Node 4
-            2, 4, 6,   // Node 5
-            5, 7,      // Node 6
-            6, 8, 9,   // Node 7
-            7, 10, 11, // Node 8
-            7, 12,     // Node 9
-            8, 13,     // Node 10
-            8, 14,     // Node 11
-            9, 13,     // Node 12
-            10, 12,    // Node 13
-            11         // Node 14
-        };
-        memcpy(graph->index, index, sizeof(index));
-        memcpy(graph->edges_array, edges, sizeof(edges));
-    }
-
-    // Check if memory allocation was successful
-    if (graph->index == NULL || graph->edges_array == NULL)
-    {
-        printf("Memory allocation failed.\n");
-        exit(EXIT_FAILURE);
-    }
-    return graph;
-}
-
-struct ArrayList *mergeLists(struct ArrayList *list1, struct ArrayList *list2)
-{
-    int size1 = list1->size;
-    int size2 = list2->size;
-    int newSize = size1 + size2;
-    printf("Merging lists of size %d and %d\n", size1, size2);
-    printf("New size: %d\n", newSize);
-    int *mergedList = malloc(newSize * sizeof(int));
-    memcpy(mergedList, list1->list, size1 * sizeof(int));
-    memcpy(mergedList + size1, list2->list, size2 * sizeof(int));
-    free(list2);
-    free(list1);
-    struct ArrayList *new = malloc(sizeof(struct ArrayList));
-    new->list = mergedList;
-    new->size = newSize;
-    return new;
-}
-
-// char *toString(struct ArrayList *list)
-// {
-//     char *str = malloc(sizeof(char) * list->size * 2);
-//     for (int i = 0; i < list->size; i++)
-//     {
-//         str[i * 2] = (char)list->list[i];
-//         str[i * 2 + 1] = ',';
-//     }
-//     str[list->size * 2 - 1] = '\0';
-//     return str;
-// }
-
-char *toString(struct ArrayList *list)
-{
-    // Initial estimate for string size
-    int estimatedSize = 1; // Start with 1 for the null terminator
-    for (int i = 0; i < list->size; i++)
-    {
-        estimatedSize += snprintf(NULL, 0, "%d,", list->list[i]);
-    }
-
-    char *str = malloc(sizeof(char) * estimatedSize);
-    if (!str)
-    {
-        return NULL; // Return NULL if memory allocation fails
-    }
-
-    char *current = str;
-    for (int i = 0; i < list->size; i++)
-    {
-        current += sprintf(current, "%d,", list->list[i]);
-    }
-
-    if (list->size > 0)
-    {
-        current[-1] = '\0'; // Replace the last comma with a null terminator
+        printf("ACK recieved from %d\n", neighborRank);
     }
     else
     {
-        *str = '\0';
+        printf("ERROR: ACK not recieved from %d\n", neighborRank);
+        printf("Recieved: %s\n", recieveBuffer);
     }
-
-    return str;
+    char *str = toString(visited);
+    if (*depth > 1)
+        printf("send visited: %s, size: %d\n", str, visited->size);
+    free(str);
+    MPI_Send(visited->list, visited->size, MPI_INT, neighborRank, 0, *graph_comm);
+    // Distribute depth to neighbors
+    int newdepth = *depth + 1;
+    MPI_Send(&newdepth, 1, MPI_INT, neighborRank, 0, *graph_comm);
 }
 
-int inList(int value, struct ArrayList *list)
-{
-    for (int i = 0; i < list->size; i++)
-        if (list->list[i] == value)
-            return 1;
-    return 0;
-}
-
+/**
+ * Notify the neighbors of a node that it has been visited at a certain depth.
+ *
+ * @param neighbors The list of neighbors of the node.
+ * @param visited The list of visited nodes.
+ * @param graph_comm The MPI communicator for the graph.
+ * @param depth The depth at which the node was visited.
+ */
 void notifyNeighbours(struct ArrayList *neighbors, struct ArrayList *visited, MPI_Comm *graph_comm, int *depth)
 {
-    char comp[6];
     for (int i = 0; i < neighbors->size; i++)
     {
         if (inList(neighbors->list[i], visited))
         {
             continue;
         }
-        printf("Notifying %d\n", (neighbors->list[i]));
-        MPI_Send(&(visited->size), 1, MPI_INT, neighbors->list[i], 0, *graph_comm);
-        // recieve ACK:<number> || DEC:0
-        sprintf(comp, "ACK:%d", visited->size);
-        char recieveBuffer[6];
-        MPI_Recv(&recieveBuffer, 6, MPI_CHAR, neighbors->list[i], 0, *graph_comm, MPI_STATUS_IGNORE);
-        // compare strings
-        if (strcmp((const char *)&recieveBuffer, (const char *)&comp) == 0)
-        {
-            printf("ACK recieved from %d\n", neighbors->list[i]);
-        }
-        else
-        {
-            printf("ERROR: ACK not recieved from %d\n", neighbors->list[i]);
-            printf("Recieved: %s\n", recieveBuffer);
-        }
-        char *str = toString(visited);
-        if (*depth > 1)
-            printf("send visited: %s, size: %d\n", str, visited->size);
-        free(str);
-        MPI_Send(visited->list, visited->size, MPI_INT, neighbors->list[i], 0, *graph_comm);
-        // Distribute depth to neighbors
-        int newdepth = *depth + 1;
-        MPI_Send(&newdepth, 1, MPI_INT, neighbors->list[i], 0, *graph_comm);
+        notifyNeighbour(neighbors->list[i], visited, graph_comm, depth);
     }
 }
 
+/**
+ * Sends the visited nodes list to the parent node.
+ *
+ * @param parentRank The rank of the parent process.
+ * @param visited A pointer to the ArrayList of visited vertices.
+ * @param graph_comm A pointer to the MPI communicator.
+ */
+void notifyParent(int parentRank, struct ArrayList *visited, MPI_Comm *graph_comm)
+{
+    // send visited array size to parent
+    MPI_Send(&(visited->size), 1, MPI_INT, parentRank, 0, *graph_comm);
+    // recieve ACK:<number> || DEC:0
+    char ack[6];
+    sprintf(ack, "ACK:%d", visited->size);
+    char recieveBuffer[6];
+    MPI_Recv(&recieveBuffer, 6, MPI_CHAR, parentRank, 0, *graph_comm, MPI_STATUS_IGNORE);
+    // compare strings
+    if (strcmp((const char *)&recieveBuffer, (const char *)&ack) == 0)
+    {
+        printf("ACK recieved from %d\n", parentRank);
+    }
+    else
+    {
+        printf("ERROR: ACK not recieved from %d\n", parentRank);
+        printf("Recieved: %s\n", recieveBuffer);
+    }
+    // send visited array to parent
+    MPI_Send(visited->list, visited->size, MPI_INT, parentRank, 0, *graph_comm);
+}
+
+/**
+ * Performs a depth-first search on a graph represented by a list of neighbors.
+ * Uses MPI for distributed computing.
+ *
+ * @param neighbors A pointer to a struct ArrayList containing the neighbors of the current node.
+ * @param graph_comm A pointer to the MPI communicator for the graph.
+ * @param rank The rank of the current process.
+ * @param size The total number of processes.
+ * @param bfsdepth The depth of the current BFS iteration.
+ * @param visited A pointer to a struct ArrayList containing the visited nodes.
+ * @param depth A pointer to an integer representing the depth of the current node.
+ */
+void DFS(struct ArrayList *neighbors, MPI_Comm *graph_comm, int rank, int size, int bfsdepth, struct ArrayList *visited, int *depth)
+{
+    struct ArrayList *visitedChildren = malloc(sizeof(struct ArrayList));
+
+    for (int i = 0; i < neighbors->size; i++)
+    {
+        if (inList(neighbors->list[i], visited))
+        {
+            continue;
+        }
+        // do DFS for one path
+        notifyNeighbour(neighbors->list[i], visited, graph_comm, depth);
+        receiveFromChild(neighbors->list[i], visitedChildren, graph_comm);
+    }
+    free(visited);
+    visited = visitedChildren;
+}
+
+/**
+ * Receives messages from child processes and updates the visited nodes and depth of the graph.
+ *
+ * @param neighbors Pointer to the ArrayList containing the neighbors of the current node.
+ * @param graph_comm Pointer to the MPI communicator for the graph.
+ * @param rank Rank of the current process.
+ * @param visited Pointer to the ArrayList containing the visited nodes.
+ * @param depth Pointer to the current depth of the graph.
+ */
+void receiveFromChildren(struct ArrayList *neighbors, MPI_Comm *graph_comm, int rank, struct ArrayList *visited, int *depth)
+{
+    struct ArrayList *visitedChildren = malloc(sizeof(struct ArrayList));
+    for (int i = 0; i < neighbors->size; i++)
+    {
+        if (inList(neighbors->list[i], visited))
+        {
+            continue;
+        }
+        // do DFS for one path
+        receiveFromChild(neighbors->list[i], visitedChildren, graph_comm);
+    }
+    free(visited);
+    visited = visitedChildren;
+}
+
+/**
+ * Receives data from a child process and updates the visited nodes list.
+ *
+ * @param childRank The rank of the child process sending the data.
+ * @param visited A pointer to the ArrayList containing the visited nodes.
+ * @param graph_comm A pointer to the MPI communicator for the graph.
+ */
+void receiveFromChild(int childRank, struct ArrayList *visited, MPI_Comm *graph_comm)
+{
+    struct ArrayList *visitedChild = malloc(sizeof(struct ArrayList));
+    MPI_Recv(&(visitedChild->size), 1, MPI_INT, childRank, 0, *graph_comm, MPI_STATUS_IGNORE);
+    char ack[6];
+    sprintf(ack, "ACK:%d", visited->size);
+    // printf("Rank: %d, Sending ACK: '%s' to %d\n", rank, ack, parentRank);
+    MPI_Send(&ack, 6, MPI_CHAR, childRank, 0, *graph_comm);
+    visitedChild->list = calloc(visitedChild->size, sizeof(int));
+    MPI_Recv(visitedChild->list, visitedChild->size, MPI_INT, childRank, 0, *graph_comm, MPI_STATUS_IGNORE);
+    // merge lists (visited is the output)
+    visited = mergeLists(visitedChild, visited);
+}
+
+/**
+ * Receives messages from the parent node and updates the list of visited nodes.
+ *
+ * @param neighbors Pointer to the ArrayList of neighbors to be updated.
+ * @param graph_comm Pointer to the MPI communicator.
+ * @param rank Rank of the current node.
+ * @param visited Pointer to the ArrayList of visited nodes to be updated.
+ * @param depth Pointer to the depth of the current node in the BFS tree.
+ * @return The rank of the parent node.
+ */
 int receiveFromParent(struct ArrayList *neighbors, MPI_Comm *graph_comm, int rank, struct ArrayList *visited, int *depth)
 {
     MPI_Status status;
@@ -230,6 +212,15 @@ int receiveFromParent(struct ArrayList *neighbors, MPI_Comm *graph_comm, int ran
     return parentRank == rank ? -1 : parentRank;
 }
 
+/**
+ * Perform a distributed breadth-first search on a graph using MPI.
+ *
+ * @param graph_comm MPI communicator for the graph
+ * @param rank rank of the current process
+ * @param size total number of processes
+ * @param bfsdepth depth of the BFS to perform
+ * @return pointer to an array containing the BFS result
+ */
 int *distributedBFS(MPI_Comm *graph_comm, int rank, int size, int bfsdepth)
 {
     // -------------  Prepare Structures --------------------------
@@ -260,6 +251,7 @@ int *distributedBFS(MPI_Comm *graph_comm, int rank, int size, int bfsdepth)
     {
         notifyNeighbours(neighborsList, visited, graph_comm, &depth);
         parent = -1;
+        receiveFromChildren(neighborsList, graph_comm, rank, visited, &depth);
     }
     else
     {
@@ -280,22 +272,28 @@ int *distributedBFS(MPI_Comm *graph_comm, int rank, int size, int bfsdepth)
         if (depth < bfsdepth)
         {
             notifyNeighbours(neighborsList, visited, graph_comm, &depth);
+            receiveFromChildren(neighborsList, graph_comm, rank, visited, &depth);
         }
         else
         {
-            printf("ERROR: Not implemented yet\n");
-            // notifyNeighbours(neighborsList, visited, graph_comm, &depth);
-            //  TODO: do DFS
+            DFS(neighborsList, graph_comm, rank, size, bfsdepth, visited, &depth);
         }
+        notifyParent(parent, visited, graph_comm);
     }
-    // --------------------- start recieving ------------------------
-
-    // TODO: Notify Structure (see flow chart)
-    //  Don't forget to free the memory allocated for 'neighbors' after you're done.
-    // TODO: 8. Recieve from children(see flow chart)
+    if (rank == 0)
+    {
+        // TODO: recieve from all children
+    }
     free(neighbors);
 }
 
+/**
+ * @brief The main function of the program.
+ *
+ * @param argc The number of command-line arguments.
+ * @param argv An array of strings containing the command-line arguments.
+ * @return int The exit status of the program.
+ */
 int main(int argc, char *argv[])
 {
     MPI_Init(&argc, &argv);
