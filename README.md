@@ -69,6 +69,16 @@ graph TD
 
 ### Further trees/examples
 
+#### 5 nodes linear
+
+```mermaid
+graph LR
+    0 --- 1
+    1 --- 2
+    2 --- 3
+    3 --- 4
+```
+
 #### 5 nodes
 
 ```c
