@@ -215,12 +215,14 @@ int receiveFromParent(struct ArrayList *neighbors, MPI_Comm *graph_comm, int ran
     int parentRank = status.MPI_SOURCE;
     // printf("Rank: %d, Sending ACK: '%s' to %d\n", rank, ack, parentRank);
     MPI_Send(&ack, 6, MPI_CHAR, parentRank, 0, *graph_comm);
-
-    visited->list = calloc(visited->size, sizeof(int));
+    // allocate memory for visited array + 1 (for current node)
+    visited->list = calloc(visited->size + 1, sizeof(int));
 
     // recieve visited array from parent
     printf("Rank: %d, Reicieving size: %d\n", rank, visited->size);
     MPI_Recv(visited->list, visited->size, MPI_INT, parentRank, 0, *graph_comm, MPI_STATUS_IGNORE);
+    // incerease size by 1 -> add current node
+    visited->size++;
     printf("Rank: %d, Recieved visited: %s\n", rank, toString(visited));
     // recieve depth from parent
     MPI_Recv(depth, 1, MPI_INT, parentRank, 0, *graph_comm, MPI_STATUS_IGNORE);
@@ -266,7 +268,11 @@ int *distributedBFS(MPI_Comm *graph_comm, int rank, int size, int bfsdepth)
         parent = receiveFromParent(neighborsList, graph_comm, rank, visitedParent, &depth);
         // printf("Rank: %d has Parent: %d\n", rank, parent);
         //  merge lists
-        visited = mergeLists(visitedParent, visited);
+        // visited = mergeLists(visitedParent, visited);
+        free(visited);
+        visited = visitedParent;
+        visited->list[visited->size - 1] = rank;
+        // end merge lists
         char *str = toString(visited);
         printf("Parent: %d, Rank: %d, depth: %d, visited: %s\n", parent, rank, depth, str);
         free(str);
