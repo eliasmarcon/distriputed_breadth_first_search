@@ -23,7 +23,8 @@
     "files.associations": {
         "stdbool.h": "c",
         "arraylist.h": "c",
-        "graph.h": "c"
+        "graph.h": "c",
+        "string.h": "c"
     },
     "C_Cpp.default.compilerPath": "/usr/bin/mpicc"
 }

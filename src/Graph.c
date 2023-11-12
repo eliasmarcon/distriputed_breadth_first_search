@@ -6,10 +6,15 @@
  * @param nodes The number of nodes in the graph.
  * @return struct Graph* Pointer to the created Graph struct.
  */
-struct Graph *getGraph(int nodes)
-{
 
+struct Graph *getGraph(int nodes, int tree)
+{
     struct Graph *graph = malloc(sizeof(struct Graph));
+    if (tree)
+    {
+        generateBinaryTree(nodes, graph->index, graph->edges_array);
+        return graph;
+    }
     if (nodes != 5 && nodes != 10 && nodes != 15)
     {
         // choose nearest graph size
@@ -83,4 +88,28 @@ struct Graph *getGraph(int nodes)
         exit(EXIT_FAILURE);
     }
     return graph;
+}
+
+void generateBinaryTree(int nodeAmount, int *index, int *edges_array)
+{
+    index = malloc(nodeAmount * sizeof(int));
+    edges_array = malloc(((nodeAmount * 2) - 2) * sizeof(int));
+
+    for (int i = 0; i < nodeAmount; ++i)
+    {
+        index[i] = i * 2;
+    }
+
+    int edgeIndex = 0;
+    for (int i = 0; i < nodeAmount; ++i)
+    {
+        if (2 * i + 1 < nodeAmount)
+        {
+            edges_array[edgeIndex++] = 2 * i + 1;
+        }
+        if (2 * i + 2 < nodeAmount)
+        {
+            edges_array[edgeIndex++] = 2 * i + 2;
+        }
+    }
 }

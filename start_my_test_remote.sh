@@ -1,1 +1,0 @@
-srun -n 10 --mpi=pmi2 ./mpi_distributed_bfs

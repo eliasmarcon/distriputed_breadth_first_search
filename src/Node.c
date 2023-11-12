@@ -3,6 +3,31 @@
 #include <stdlib.h>
 #include "cJSON.h"
 
+/**
+ * @brief Prints the children of a given node.
+ *
+ * @param node Pointer to the node whose children are to be printed.
+ */
+void printChildren(struct Node *node, int rank)
+{
+    if (node->childrenCount > 0)
+    {
+        struct Node **children = (node->children);
+        for (int i = 0; i < node->childrenCount; i++)
+        {
+            struct Node *child = children[i];
+            printChild(child, i);
+            children++;
+        }
+        //   printf("Rank: %d, %d\n", children->rank);
+    }
+}
+
+void printChild(struct Node *node, int i)
+{
+    printf("\t %d. Child: %d\n", i, node->rank);
+}
+
 char *NodetoString(const struct Node *node)
 {
     return convertToJson(node);
@@ -21,7 +46,9 @@ char *convertToJson(const struct Node *node)
 cJSON *nodeToJson(const struct Node *node)
 {
     if (node == NULL)
+    {
         return NULL;
+    }
 
     cJSON *jsonNode = cJSON_CreateObject();
     cJSON_AddNumberToObject(jsonNode, "rank", node->rank);
@@ -34,7 +61,9 @@ cJSON *nodeToJson(const struct Node *node)
         cJSON *childrenArray = cJSON_CreateArray();
         for (int i = 0; i < node->childrenCount; ++i)
         {
+            // printf("Nodetojson: Adding child %d\n", i);
             cJSON_AddItemToArray(childrenArray, nodeToJson(node->children[i]));
+            // printf("Nodetojson: After Adding child %d\n", i);
         }
         cJSON_AddItemToObject(jsonNode, "children", childrenArray);
     }
@@ -89,4 +118,33 @@ struct Node *jsonToNode(const cJSON *jsonNode)
     }
 
     return node;
+}
+
+/**
+ * Prints the full graph recursivley starting from the given node.
+ *
+ * @param node The starting node of the graph to be printed.
+ */
+void printFullGraph(struct Node *node)
+{
+    if (node == NULL)
+        return;
+
+    // printing part
+    for (int i = 0; i < node->depth; i++)
+    {
+        printf("\t");
+    }
+    printf("%d\n", node->rank);
+
+    // end printing part
+    if (node->childrenCount > 0)
+    {
+        struct Node **children = (node->children);
+        for (int i = 0; i < node->childrenCount; i++)
+        {
+            struct Node *child = children[i];
+            printFullGraph(child);
+        }
+    }
 }
