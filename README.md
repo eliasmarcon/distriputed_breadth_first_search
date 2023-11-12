@@ -1,14 +1,16 @@
-# distriputed_breadth_first_search
+# distributed_breadth_first_search
 
-Implement a distributed breadth-first search algorithm in MPI, to find the diameter of a graph.
+Implement a distributed breadth-first search algorithm in MPI, to traverse a tree. If the max depth is exceeded, the program will switch to a depth-first search.
+
+One important remark: DFS only reduces the parallelism of the algorithm, but does not change the amount of messages sent in total. Overall DFS can be slower, but helps to save switch resource.
 
 ## Flow chart of DBFS
 
 ```mermaid
 flowchart LR
-Root --1. Send Visited--> Node
+Root --1. Notify--> Node
 Root --2. Start Receive--> Root
-Node --3. Send Visited--> Leaf-1
+Node --3. Notify--> Leaf-1
 Node --4. Start Receive--> Node
 
 Leaf-1 --5. Notify Structure--> Node
@@ -25,23 +27,81 @@ Root --8. Received--> Root
 - Ing. Fabian Steiner BSc.| [@fasteiner](https://github.com/fasteiner/)
 - Jan Langela Regincos BSc. | [@janpilu](https://github.com/janpilu)
 
+## Folder Structure
+
+- `./include`:
+
+  - `ArrayList.h`: defines the data structure for the `ArrayList.c` file
+
+  - `cJSON.h`: defines the data structure for the `cJSON.c` file
+
+  - `Graph.h`: defines the data structure for the `Graph.c` file
+
+  - `Node.h`: defines the data structure for the `Node.c` file
+
+- `./src`:
+
+  - `ArrayList.c`: defines functions for merging two ArrayLists, converting an ArrayList to a string representation, and checking if a specified value is present in the ArrayList
+
+  - `cJSON.c`: external repository(#) under MIT License, grants permission for free use, modification, and distribution of the cJSON library
+
+  - `distributed_bfs.c`: utilizes MPI for distributed computing to perform a breadth-first search (BFS) on a graph, measuring and outputting relevant metrics such as execution time, message counts, and the structure of the resulting BFS tree
+
+  - `Graph.c`: defines functions to create and print a binary tree-based graph with a specified number of nodes, including memory allocation checks and edge generation based on the binary tree structure
+
+  - `Node.c`: defines functions for printing children, converting a Node struct to a JSON string and vice versa, and printing the full graph starting from a given node
+
+- `./out`: contains the executable file `mpi_distributed_bfs` for the distributed breadth-first search created through the build process
+
+- `Makefile` : configuration file that controls the build process of the MPI program (contains rules and commands to compile the project and create the executable file `mpi_floodmax` and `mpi_optimized_floodmax`)
+
+- `start_distributed_bfs.sh`: automates the execution of the `make all` command and MPI program (distributed breadth-first) with a user-specified number of processes and max depth (saves the results of the run in the output file `distributed_bfs_results.txt` for monitoring and analysis)
+
+- `distributed_bfs_results.txt`: contains the results of the most recent run
+
+- `distributed_bfs_results_DEBUG.txt`: contains a result with DEBUG and a bigger tree
+
+## How to build
+
+### Prerequisites
+
+- Ubuntu 20.04
+- mpich
+
+### Build
+
+- make all command is included in the start_distirbuted_bfs.sh file
+
+### Usage
+
+To use the provided Bash script for running the distributed breadth-first search algorithm, follow these steps:
+
+1. Ensure that MPI is installed on your system.
+
+2. Open a terminal and navigate to the directory containing this bash script.
+
+3. Run the bash script by providing the run_type (cluster, local), the number of MPI tasks and the desired max depth as command-line arguments.
+
+- Default Parameters:
+  - run_type = local
+  - number of tasks = 5
+  - max depth = 10
+
+```sh
+./start_distributed_bfs.sh <run_type> <number_of_tasks> <max_depth> (replace `<run_type>` `<number_of_tasks>` and `<max_depth>` with the actual values)
+
+./start_distributed_bfs.sh local 5 5
+
+./start_distributed_bfs.sh cluster 10 10
+
+```
+
 ## Building a tree in MPI
 
 - Index: list the cumulative edge count (if node 1 has two edges and node 2 has two edges, index 0 will be 2 and index 1 will be 4)
 - edges: lists the edges of the graph (if node 1 has two edges to node 0 and node 2, edges 0 and 1 will be 0 and 2)
 
 ```c
-// ---
-// Full mesh
-
-//  0
-// / \
-//1---2
-
-    int n = 3;                         // Number of nodes
-    int index[3] = {2, 4, 6};          // Cumulative degree of nodes
-    int edges[6] = {1, 2, 0, 2, 0, 1}; // Edges in the graph
-
 // binary tree
 
 //   0
@@ -52,13 +112,6 @@ int n = 3; // Number of nodes
 int index[3] = {2, 3, 4}; // Cumulative degree of nodes
 int edges[4] = {1, 2, 0, 0}; // Edges in the graph
 
-```
-
-```mermaid
-graph TD
-    0 --- 1
-    0 --- 2
-    1 --- 2
 ```
 
 ```mermaid
@@ -79,122 +132,36 @@ graph LR
     3 --- 4
 ```
 
-#### 5 nodes
+```c
+int n = 5; // Number of nodes
+int index[5] = {1, 3, 5, 7, 8}; // Cumulative degree of nodes
+int edges[10] = {
+    1       // Node 0
+    0, 2,   // Node 1
+    1, 3,   // Node 2
+    2, 4,   // Node 3
+    3       // Node 4
+};          // Edges in the graph
+```
+
+#### 5 Nodes Binary Tree
+
+```mermaid
+graph TB
+    0 --- 1
+    0 --- 2
+    1 --- 3
+    1 --- 4
+```
 
 ```c
 int n = 5; // Number of nodes
-int index[5] = {3, 5, 7, 10, 12}; // Cumulative degree of nodes
+int index[5] = {2, 5, 6, 7, 8}; // Cumulative degree of nodes
 int edges[10] = {
-    1, 2, 3,
-    0, 4,
-    0,
-    0, 4
-    1, 3}; // Edges in the graph
-```
-
-```c
-  0
- /|\
-1 2 3
- \  /
-  4
-```
-
-```mermaid
-graph TD
-    0 --- 1
-    0 --- 2
-    0 --- 3
-    1 --- 4
-    3 --- 4
-```
-
-#### 10 nodes
-
-```c
-int n = 10; // Number of nodes
-int index[10] = {2, 4, 6, 8, 10, 12, 14, 16, 18, 20}; // Cumulative degree of nodes
-int edges[20] = {1, 2, 0, 3, 1, 4, 2, 5, 3, 6, 4, 7, 5, 8, 6, 9, 7, 0, 8, 1}; // Edges in the graph
-```
-
-```c
-0 -- 1 -- 2
-|     /    |
-9    /     3
-|   /      |
-8 - 7 ---- 4
-     |    /
-     6 -- 5
-```
-
-```mermaid
-graph TD;
-    0 --- 1
-    1 --- 2
-    2 --- 3
-    3 --- 4
-    4 --- 5
-    5 --- 6
-    6 --- 7
-    7 --- 8
-    7 --- 2
-    8 --- 9
-    9 --- 0
-    7 --- 4
-```
-
-#### 15 nodes
-
-```c
-int n = 15; // Number of nodes
-int index[15] = {3, 5, 8, 10, 12, 14, 16, 19, 22, 24, 26, 28, 30, 32, 34}; // Cumulative degree of nodes
-int edges[34] = {
-    1, 2, 3,   // Node 0
-    0, 4,      // Node 1
-    0, 3, 5,   // Node 2
-    0, 2,      // Node 3
-    1, 5,      // Node 4
-    2, 4, 6,   // Node 5
-    5, 7,      // Node 6
-    6, 8, 9,   // Node 7
-    7, 10, 11, // Node 8
-    7, 12,     // Node 9
-    8, 13,     // Node 10
-    8, 14,     // Node 11
-    9, 13,     // Node 12
-    10, 12,    // Node 13
-    11         // Node 14
-}; // Edges in the graph
-```
-
-```c
-    0 -- 1 -- 4
-   /|     \
-  / |      5 -- 6 -- 7 -- 9 -- 12 -- 13 -- 10 -- 8
- 3  |                     |    |                 |
-  \ |                     8    13 -- 12         11
-   \|                   /  \                   /
-    2 ---------------- 5    11 -------------- 14
-```
-
-```mermaid
-graph TD
-    0 --- 1
-    0 --- 2
-    0 --- 3
-    1 --- 4
-    1 --- 5
-    2 --- 5
-    2 --- 3
-    5 --- 6
-    6 --- 7
-    7 --- 9
-    9 --- 8
-    8 --- 10
-    8 --- 11
-    9 --- 12
-    10 --- 13
-    11 --- 14
-    12 --- 13
-
+    1, 2,       // Node 0
+    0, 3, 4,    // Node 1
+    0,          // Node 2
+    1,          // Node 3
+    1           // Node 4
+};              // Edges in the graph
 ```

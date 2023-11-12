@@ -7,7 +7,7 @@
 
 // strlen("ACK:4294967296\0") = 15
 #define ACK_BUFFER_DEFAULT 15
-#define DEBUG 1
+#define DEBUG 0
 
 bool sendSize(int *len, int rank, MPI_Comm *graph_comm);
 bool recieveSize(int *len, int *rank, MPI_Comm *graph_comm);
@@ -22,6 +22,14 @@ struct Node *distributedBFS(MPI_Comm *graph_comm, int size, int bfsdepth);
 
 int rank, *depth, count;
 
+/**
+ * Sends the size of a message to another process using MPI communication.
+ *
+ * @param len Pointer to the size of the message to be sent.
+ * @param otherRank The rank of the receiving process.
+ * @param graph_comm Pointer to the MPI communicator.
+ * @return True if the message size was successfully sent, false otherwise.
+ */
 bool sendSize(int *len, int otherRank, MPI_Comm *graph_comm)
 {
     if (DEBUG)
@@ -59,6 +67,14 @@ bool sendSize(int *len, int otherRank, MPI_Comm *graph_comm)
     free(recieveBuffer);
     return succ;
 }
+/**
+ * @brief Receives the size of a message from a specific rank in a given MPI communicator.
+ *
+ * @param len Pointer to an integer that will store the size of the message received.
+ * @param otherRank Pointer to an integer that specifies the rank of the process that sent the message.
+ * @param graph_comm Pointer to the MPI communicator used for communication.
+ * @return true if the message was received successfully, false otherwise.
+ */
 bool recieveSize(int *len, int *otherRank, MPI_Comm *graph_comm)
 {
     MPI_Status status;
@@ -213,9 +229,6 @@ struct Node *receiveFromChildren(struct ArrayList *neighbors, MPI_Comm *graph_co
         }
         node->children[childrenCount] = receiveFromChild(graph_comm);
         childrenCount++;
-        // struct ArrayList *visitedChild = receiveFromChild(graph_comm);
-        // merge lists (visited is the output)
-        // visitedChildren = mergeLists(visitedChildren, visitedChild);
     }
     node->childrenCount = childrenCount;
     if (DEBUG)
@@ -271,7 +284,6 @@ int receiveFromParent(struct ArrayList *neighbors, MPI_Comm *graph_comm, struct 
         visited->list = calloc(visited->size + 1, sizeof(int));
 
         // recieve visited array from parent
-        // printf("Rank: %d, Reicieving size: %d\n", rank, visited->size);
         MPI_Recv(visited->list, visited->size, MPI_INT, parentRank, 0, *graph_comm, MPI_STATUS_IGNORE);
     }
     // incerease size by 1 -> add current node
@@ -315,7 +327,6 @@ struct Node *distributedBFS(MPI_Comm *graph_comm, int size, int bfsdepth)
     // mark ourselves as visited
     visited->list[0] = rank;
     // mark neighbors as visited
-    // printf("Rank: %d, n_neighbors: %d\n", rank, n_neighbors);
     int parent;
     struct Node *node;
     if (rank == 0)
@@ -333,12 +344,9 @@ struct Node *distributedBFS(MPI_Comm *graph_comm, int size, int bfsdepth)
     }
     else
     {
-        // memcpy(visited->list + 1, neighbors, n_neighbors * sizeof(int));
         struct ArrayList *visitedParent = malloc(sizeof(struct ArrayList));
         parent = receiveFromParent(neighborsList, graph_comm, visitedParent);
-        // printf("Rank: %d, has Parent: %d\n", rank, parent);
-        //  merge lists
-        // visited = mergeLists(visitedParent, visited);
+        // merge lists
         free(visited);
         visited = visitedParent;
         visited->list[visited->size - 1] = rank;
@@ -409,8 +417,8 @@ int main(int argc, char *argv[])
         bfsdepth = 2;
     }
 
-    struct Graph *graph = getGraph(size, 1);
-    printf("DEBUG: %d\n", (rank == 0) && (DEBUG));
+    struct Graph *graph = getGraph(size);
+
     if ((rank == 0) && (DEBUG))
     {
         printGraph(graph);
@@ -435,6 +443,7 @@ int main(int argc, char *argv[])
         printf("======================= Output Start ======================\n");
         printf("===================== Distributed BFS =====================\n");
         printf("Number of processes: %d\n", size);
+        printf("Max Depth: %d\n", bfsdepth);
         printf("Time taken: %f\n", ((double)time) / CLOCKS_PER_SEC);
         printf("Total Messages sent: %d\n", sumCalls);
         printf("Full Graph:\n");
@@ -443,7 +452,6 @@ int main(int argc, char *argv[])
         printf("======================= Output End ========================\n\n");
     }
 
-    // TODO: Process results (extract diameter, etc.)
     //  Cleanup
     MPI_Comm_free(&graph_comm);
     free(graph->index);

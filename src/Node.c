@@ -22,11 +22,23 @@ void printChildren(struct Node *node, int rank)
     }
 }
 
+/**
+ * Prints the ith child of the given node.
+ *
+ * @param node The node whose child will be printed.
+ * @param i The index of the child to be printed.
+ */
 void printChild(struct Node *node, int i)
 {
     printf("\t %d. Child: %d\n", i, node->rank);
 }
 
+/**
+ * Converts a Node struct to a string representation.
+ *
+ * @param node The Node struct to be converted.
+ * @return A string representation of the Node struct.
+ */
 char *NodetoString(const struct Node *node)
 {
     return convertToJson(node);
@@ -34,6 +46,12 @@ char *NodetoString(const struct Node *node)
 
 cJSON *nodeToJson(const struct Node *node);
 
+/**
+ * @brief Converts a Node struct to a JSON string.
+ *
+ * @param node The Node struct to be converted.
+ * @return char* The JSON string representation of the Node struct.
+ */
 char *convertToJson(const struct Node *node)
 {
     cJSON *jsonNode = nodeToJson(node);
@@ -42,6 +60,12 @@ char *convertToJson(const struct Node *node)
     return jsonString;
 }
 
+/**
+ * Converts a Node struct to a JSON object.
+ *
+ * @param node The Node struct to be converted.
+ * @return A cJSON object representing the Node struct.
+ */
 cJSON *nodeToJson(const struct Node *node)
 {
     if (node == NULL)
@@ -60,9 +84,7 @@ cJSON *nodeToJson(const struct Node *node)
         cJSON *childrenArray = cJSON_CreateArray();
         for (int i = 0; i < node->childrenCount; ++i)
         {
-            // printf("Nodetojson: Adding child %d\n", i);
             cJSON_AddItemToArray(childrenArray, nodeToJson(node->children[i]));
-            // printf("Nodetojson: After Adding child %d\n", i);
         }
         cJSON_AddItemToObject(jsonNode, "children", childrenArray);
     }
@@ -72,6 +94,12 @@ cJSON *nodeToJson(const struct Node *node)
 
 struct Node *jsonToNode(const cJSON *jsonNode);
 
+/**
+ * Converts a JSON string to a Node struct.
+ *
+ * @param jsonString The JSON string to convert.
+ * @return A pointer to the converted Node struct.
+ */
 struct Node *convertFromJson(const char *jsonString)
 {
     cJSON *jsonNode = cJSON_Parse(jsonString);
@@ -80,6 +108,12 @@ struct Node *convertFromJson(const char *jsonString)
     return node;
 }
 
+/**
+ * @brief Converts a JSON object to a Node struct.
+ *
+ * @param jsonNode The JSON object to convert.
+ * @return struct Node* The Node struct created from the JSON object.
+ */
 struct Node *jsonToNode(const cJSON *jsonNode)
 {
     if (jsonNode == NULL)
@@ -120,30 +154,49 @@ struct Node *jsonToNode(const cJSON *jsonNode)
 }
 
 /**
- * Prints the full graph recursivley starting from the given node.
+ * Prints the given node.
+ *
+ * @param node The node to be printed.
+ * @param isLast Flag indicating whether the node is the last one in the list.
+ */
+void printNode(struct Node *node, int isLast)
+{
+
+    if (node == NULL)
+        return;
+
+    // Print leading space with vertical lines
+    for (int i = 0; i < node->depth - 1; i++)
+    {
+        printf("    ");
+    }
+
+    // Print the current node
+    if (node->depth > 0)
+    {
+        printf(isLast ? "└── " : "|── ");
+    }
+
+    printf("%d\n", node->rank);
+
+    // Recursively print children
+    if (node->childrenCount > 0)
+    {
+        struct Node **children = node->children;
+        for (int i = 0; i < node->childrenCount; i++)
+        {
+
+            printNode(children[i], i == node->childrenCount - 1);
+        }
+    }
+}
+
+/**
+ * Prints the full graph starting from the given node.
  *
  * @param node The starting node of the graph to be printed.
  */
 void printFullGraph(struct Node *node)
 {
-    if (node == NULL)
-        return;
-
-    // printing part
-    for (int i = 0; i < node->depth; i++)
-    {
-        printf("\t");
-    }
-    printf("%d\n", node->rank);
-
-    // end printing part
-    if (node->childrenCount > 0)
-    {
-        struct Node **children = (node->children);
-        for (int i = 0; i < node->childrenCount; i++)
-        {
-            struct Node *child = children[i];
-            printFullGraph(child);
-        }
-    }
+    printNode(node, 1);
 }

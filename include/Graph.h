@@ -11,7 +11,7 @@ struct Graph
     int *edges_array;
 };
 
-struct Graph *getGraph(int nodes, int tree);
+struct Graph *getGraph(int nodes);
 void generateBinaryTree(int, int **index, int **edges_array);
 void printGraph(struct Graph *graph);
 

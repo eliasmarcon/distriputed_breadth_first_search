@@ -12,8 +12,6 @@ struct ArrayList *mergeLists(struct ArrayList *list1, struct ArrayList *list2)
     int size1 = list1->size;
     int size2 = list2->size;
     int newSize = size1 + size2;
-    // printf("Merging lists of size %d and %d\n", size1, size2);
-    // printf("New size: %d\n", newSize);
     int *mergedList = malloc(newSize * sizeof(int));
     memcpy(mergedList, list1->list, size1 * sizeof(int));
     memcpy(mergedList + size1, list2->list, size2 * sizeof(int));
@@ -64,6 +62,13 @@ char *toString(struct ArrayList *list)
     return str;
 }
 
+/**
+ * Check if a value is in the given ArrayList.
+ *
+ * @param value The value to search for.
+ * @param list The ArrayList to search in.
+ * @return 1 if the value is in the list, 0 otherwise.
+ */
 int inList(int value, struct ArrayList *list)
 {
     for (int i = 0; i < list->size; i++)
