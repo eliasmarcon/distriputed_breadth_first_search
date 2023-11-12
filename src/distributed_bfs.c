@@ -408,7 +408,7 @@ int main(int argc, char *argv[])
         bfsdepth = 2;
     }
 
-    struct Graph *graph = getGraph(size, 0);
+    struct Graph *graph = getGraph(size, 1);
 
     // Create a graph communicator based on the topology
     MPI_Comm graph_comm;
@@ -436,17 +436,17 @@ int main(int argc, char *argv[])
         printFullGraph(node);
         printf("======================= Output End ========================\n\n");
     }
-    else
-    {
-        MPI_Comm_free(&graph_comm);
-        free(graph->index);
-        free(graph->edges_array);
-        free(graph);
-        free(depth);
-        free(node);
-        MPI_Finalize();
-        return 0;
-    }
+    // else
+    // {
+    //     MPI_Comm_free(&graph_comm);
+    //     free(graph->index);
+    //     free(graph->edges_array);
+    //     free(graph);
+    //     free(depth);
+    //     free(node);
+    //     MPI_Finalize();
+    //     return 0;
+    // }
 
     // TODO: Process results (extract diameter, etc.)
     //  Cleanup
