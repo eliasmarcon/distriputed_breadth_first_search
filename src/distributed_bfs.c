@@ -7,7 +7,7 @@
 
 // strlen("ACK:4294967296\0") = 15
 #define ACK_BUFFER_DEFAULT 15
-#define DEBUG 0
+#define DEBUG 1
 
 bool sendSize(int *len, int rank, MPI_Comm *graph_comm);
 bool recieveSize(int *len, int *rank, MPI_Comm *graph_comm);
@@ -25,7 +25,7 @@ int rank, *depth, count;
 bool sendSize(int *len, int otherRank, MPI_Comm *graph_comm)
 {
     if (DEBUG)
-        printf("Rank: %d, Sending size: %d to Parent %d\n", rank, *len, otherRank);
+        printf("Rank: %d, Sending size: %d to %d\n", rank, *len, otherRank);
     MPI_Send(len, 1, MPI_INT, otherRank, 0, *graph_comm);
     count++;
     // recieve ACK:<number> || DEC:0
@@ -87,11 +87,6 @@ void notifyNeighbour(int neighborRank, struct ArrayList *visited, MPI_Comm *grap
         printf("Rank: %d, Notifying %d\n", rank, (neighborRank));
     if (sendSize(&visited->size, neighborRank, graph_comm))
     {
-        char *str = toString(visited);
-        if (*depth > 1)
-        { // printf("send visited: %s, size: %d\n", str, visited->size);
-        }
-        free(str);
         MPI_Send(visited->list, visited->size, MPI_INT, neighborRank, 0, *graph_comm);
         count++;
         // Distribute depth to neighbors
@@ -212,10 +207,12 @@ struct Node *receiveFromChildren(struct ArrayList *neighbors, MPI_Comm *graph_co
         {
             continue;
         }
+        if (DEBUG)
+        {
+            printf("Rank: %d, Receiving from: %d\n", rank, neighbors->list[i]);
+        }
         node->children[childrenCount] = receiveFromChild(graph_comm);
-        // printChild(node->children[childrenCount], childrenCount);
         childrenCount++;
-
         // struct ArrayList *visitedChild = receiveFromChild(graph_comm);
         // merge lists (visited is the output)
         // visitedChildren = mergeLists(visitedChildren, visitedChild);
@@ -223,8 +220,9 @@ struct Node *receiveFromChildren(struct ArrayList *neighbors, MPI_Comm *graph_co
     node->childrenCount = childrenCount;
     if (DEBUG)
     {
+        printf("Rank: %d, Received from all children - childrenCount: %d\n", rank, node->childrenCount);
         printChildren(node, rank);
-        printf("Rank: %d, Received from all children\n", rank);
+        printf("Rank: %d, Received from all children - after print\n", rank);
     }
     return node;
 }
@@ -322,6 +320,8 @@ struct Node *distributedBFS(MPI_Comm *graph_comm, int size, int bfsdepth)
     struct Node *node;
     if (rank == 0)
     {
+        if (DEBUG)
+            printf("Rank: %d, Notifying Children\n", rank);
         notifyNeighbours(neighborsList, visited, graph_comm);
         parent = -1;
         if (DEBUG)
@@ -343,10 +343,12 @@ struct Node *distributedBFS(MPI_Comm *graph_comm, int size, int bfsdepth)
         visited = visitedParent;
         visited->list[visited->size - 1] = rank;
         // end merge lists
-        char *str = toString(visited);
         if (DEBUG)
+        {
+            char *str = toString(visited);
             printf("Rank: %d, Parent: %d, depth: %d, visited: %s\n", rank, parent, *depth, str);
-        free(str);
+            free(str);
+        }
         // only use BFS if depth is not reached
         if (*depth < bfsdepth)
         {
@@ -368,11 +370,10 @@ struct Node *distributedBFS(MPI_Comm *graph_comm, int size, int bfsdepth)
         if (DEBUG)
         {
             printf("Printing\n");
-            printf("Rank: %d, Sending Node: depth: %d, childrenCount: %d, parent: %d, %d\n", rank, node->depth, node->childrenCount, node->parent, node->rank);
+            printf("Rank: %d, Sending Node: depth: %d, childrenCount: %d, parent: %d, node object rank: %d\n", rank, node->depth, node->childrenCount, node->parent, node->rank);
             printChildren(node, rank);
             char *str2 = NodetoString(node);
             printf("Rank: %d, notifyParent: json = %s\n", rank, str2);
-            free(str2);
             free(str2);
             printf("Printed\n");
         }
@@ -409,6 +410,11 @@ int main(int argc, char *argv[])
     }
 
     struct Graph *graph = getGraph(size, 1);
+    printf("DEBUG: %d\n", (rank == 0) && (DEBUG));
+    if ((rank == 0) && (DEBUG))
+    {
+        printGraph(graph);
+    }
 
     // Create a graph communicator based on the topology
     MPI_Comm graph_comm;
@@ -436,17 +442,6 @@ int main(int argc, char *argv[])
         printFullGraph(node);
         printf("======================= Output End ========================\n\n");
     }
-    // else
-    // {
-    //     MPI_Comm_free(&graph_comm);
-    //     free(graph->index);
-    //     free(graph->edges_array);
-    //     free(graph);
-    //     free(depth);
-    //     free(node);
-    //     MPI_Finalize();
-    //     return 0;
-    // }
 
     // TODO: Process results (extract diameter, etc.)
     //  Cleanup

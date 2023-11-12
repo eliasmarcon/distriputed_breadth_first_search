@@ -4,20 +4,19 @@
  * @brief Returns a pointer to a Graph struct with the specified number of nodes.
  *
  * @param nodes The number of nodes in the graph.
+ * @param tree Whether or not the graph should be a binary tree.
  * @return struct Graph* Pointer to the created Graph struct.
  */
-
 struct Graph *getGraph(int nodes, int tree)
 {
     struct Graph *graph = malloc(sizeof(struct Graph));
     graph->nodeAmount = nodes;
     if (tree)
     {
-        printf("Generating2\n");
         generateBinaryTree(nodes, &(graph->index), &(graph->edges_array));
+        printf("Generated Tree\n");
         return graph;
     }
-    printf("Generating3\n");
     if (nodes != 5 && nodes != 10 && nodes != 15)
     {
         // choose nearest graph size
@@ -93,70 +92,93 @@ struct Graph *getGraph(int nodes, int tree)
     return graph;
 }
 
-// Function to create the binary tree topology
-/**
- * Generates a binary tree with the specified number of nodes.
- *
- * @param num_nodes The number of nodes in the binary tree.
- * @param indexes A pointer to a pointer that will hold the indexes of the nodes.
- * @param edges A pointer to a pointer that will hold the edges of the nodes.
- */
-// void generateBinaryTree(int num_nodes, int **indexes, int **edges)
-// {
-//     *indexes = (int *)malloc(num_nodes * sizeof(int)); // Allocate memory for the indexes array.
-//     int total_edges = (num_nodes - 1) * 2;             // Calculate the total number of edges in the tree.
-//     *edges = (int *)malloc(total_edges * sizeof(int)); // Allocate memory for the edges array.
-
-//     int edge_pos = 0; // Position in the edges array to insert new edges.
-//     for (int i = 0; i < num_nodes; i++)
-//     {
-//         // For each node in the tree...
-//         if (i < num_nodes / 2)
-//         { // If it's an internal node...
-//             // Set the cumulative degree in the indexes array.
-//             (*indexes)[i] = (i == 0) ? 2 : (*indexes)[i - 1] + 2;
-//             // Set the left and right children in the edges array.
-//             (*edges)[edge_pos++] = i * 2 + 1; // Left child
-//             (*edges)[edge_pos++] = i * 2 + 2; // Right child
-//         }
-//         else
-//         { // If it's a leaf node...
-//             // Set the cumulative degree for the leaf node.
-//             (*indexes)[i] = (*indexes)[i - 1] + 1;
-//             // Leaf nodes do not have children, so we don't add edges for them.
-//         }
-//     }
-// }
-
+/*
+Generates a binary tree with the specified number of nodes.
+*
+ *@param num_nodes The number of nodes in the binary tree.
+*@param indexes A pointer to a pointer that will hold the indexes of the nodes.
+*@param edges A pointer to a pointer that will hold the edges of the nodes.
+*/
 void generateBinaryTree(int num_nodes, int **indexes, int **edges)
 {
     *indexes = (int *)malloc(num_nodes * sizeof(int));
-    int total_edges = (num_nodes - 1) * 2;
-    *edges = (int *)malloc(total_edges * sizeof(int));
+    *edges = (int *)malloc((num_nodes - 1) * 2 * sizeof(int));
+
+    if (!(*indexes) || !(*edges))
+    {
+        fprintf(stderr, "Memory allocation failed\n");
+        exit(EXIT_FAILURE);
+    }
+
+    int nrOfLeafs = 0;
+    int parentCumulativeIndex = 0;
+    int hasParent = 0;
 
     int edge_pos = 0; // Position in the edges array
 
-    printf("numnodes %d", num_nodes);
     for (int i = 0; i < num_nodes; i++)
     {
-        if (i < num_nodes / 2)
+        if (i > 0)
         {
-            // Internal nodes
-            (*indexes)[i] = edge_pos;
-            if (i * 2 + 1 < num_nodes)
-            {
-                (*edges)[edge_pos++] = i * 2 + 1; // Left child
-            }
-            if (i * 2 + 2 < num_nodes)
-            {
-                (*edges)[edge_pos++] = i * 2 + 2; // Right child
-            }
+            hasParent = 1;
         }
-        else
+        int parentIndex = (i - 1) / 2;
+        if (parentIndex >= 0 && i != 0)
         {
-            // Leaf nodes
-            (*indexes)[i] = edge_pos; // Leaf nodes do not add new edges
+            (*edges)[edge_pos++] = parentIndex; // Parent node
         }
+
+        // Add left child if it exists
+        if (2 * i + 1 < num_nodes)
+        {
+            nrOfLeafs++;
+            (*edges)[edge_pos++] = 2 * i + 1; // Left child
+        }
+
+        // Add right child if it exists
+        if (2 * i + 2 < num_nodes)
+        {
+            nrOfLeafs++;
+            (*edges)[edge_pos++] = 2 * i + 2; // Right child
+        }
+
+        int cumulativeIndex = nrOfLeafs + parentCumulativeIndex + hasParent;
+        (*indexes)[i] = cumulativeIndex;
+        nrOfLeafs = 0;
+        parentCumulativeIndex = cumulativeIndex;
     }
-    printf("done");
+}
+// [1, 2,
+//  0, 3, 4,
+//  0, 5, 6,
+//  1, 7, 8 1, 9,
+//  2,
+//  2,
+//  3,
+//  3,
+//  4,
+// ]
+
+/**
+ * Prints the given graph.
+ *
+ * @    void printGraph(struct Graph *graph)
+ * @param graph The graph to print.
+ */
+void printGraph(struct Graph *graph)
+{
+    printf("\n=======================================\n");
+    printf("Graph with %d nodes\n", graph->nodeAmount);
+    printf("Index: ");
+    for (int i = 0; i < graph->nodeAmount; i++)
+    {
+        printf("%d ", graph->index[i]);
+    }
+    printf("\nEdges: ");
+    for (int i = 0; i < graph->index[graph->nodeAmount - 1]; i++)
+    {
+        printf("%d ", graph->edges_array[i]);
+    }
+    printf("\n");
+    printf("=======================================\n\n");
 }

@@ -1,0 +1,76 @@
+Rank: 0, Setting depth to 10
+Rank: 0, Notifying 1
+Rank: 0, Sending size: 1 to Parent 1
+Rank: 0, ACK recieved from 1
+Rank: 1, Sending ACK: 'ACK:1' to 0
+Rank: 1, Parent: 0, depth: 1, visited: 0,1
+Rank: 1, Notifying 2
+Rank: 1, Sending size: 2 to Parent 2
+Rank: 2, Sending ACK: 'ACK:2' to 1
+Rank: 1, ACK recieved from 2
+Rank: 1, recieveFromChildren
+Rank: 2, Parent: 1, depth: 2, visited: 0,1,2
+Rank: 2, Notifying 3
+Rank: 2, Sending size: 3 to Parent 3
+Rank: 3, Sending ACK: 'ACK:3' to 2
+Rank: 2, ACK recieved from 3
+Rank: 2, recieveFromChildren
+Rank: 3, Parent: 2, depth: 3, visited: 0,1,2,3
+Rank: 3, Notifying 4
+Rank: 3, Sending size: 4 to Parent 4
+Rank: 4, Sending ACK: 'ACK:4' to 3
+Rank: 3, ACK recieved from 4
+Rank: 3, recieveFromChildren
+Rank: 4, Parent: 3, depth: 4, visited: 0,1,2,3,4
+Rank: 4, recieveFromChildren
+Rank: 4, notifyParent: json = {
+	"rank":	4,
+	"depth":	4,
+	"parent":	3,
+	"childrenCount":	0
+}
+Rank: 4, Sending size: 62 to Parent 3
+Rank: 3, Sending ACK: 'ACK:62' to 4
+Rank: 4, ACK recieved from 3
+AAAAAAAABBBBBBBBRank: 3, Received from: 4, Recieved json: {
+	"rank":	4,
+	"depth":	4,
+	"parent":	3,
+	"childrenCount":	0
+}
+
+===================================================================================
+=   BAD TERMINATION OF ONE OF YOUR APPLICATION PROCESSES
+=   PID 4797 RUNNING AT ubunt-aprg
+=   EXIT CODE: 139
+=   CLEANING UP REMAINING PROCESSES
+=   YOU CAN IGNORE THE BELOW CLEANUP MESSAGES
+===================================================================================
+YOUR APPLICATION TERMINATED WITH THE EXIT STRING: Segmentation fault (signal 11)
+This typically refers to a problem with your application.
+Please see the FAQ page for debugging suggestions
+Rank: 0, Setting depth to 3
+Rank: 0, Notifying 1
+Rank: 0, Sending size: 1 to Parent 1
+Rank: 1, Sending ACK: 'ACK:1' to 0
+Rank: 0, ACK recieved from 1
+Rank: 0, Notifying 2
+Rank: 0, Sending size: 1 to Parent 2
+Rank: 0, ACK recieved from 2
+Rank: 2, Sending ACK: 'ACK:1' to 0
+Rank: 2, Parent: 0, depth: 1, visited: 0,2
+Rank: 2, Notifying 1
+Rank: 2, Sending size: 2 to Parent 1
+Rank: 1, Parent: 0, depth: 1, visited: 0,1
+Rank: 1, Notifying 3
+Rank: 1, Sending size: 2 to Parent 3
+Rank: 3, Sending ACK: 'ACK:2' to 1
+Rank: 1, ACK recieved from 3
+Rank: 1, recieveFromChildren
+Rank: 1, Sending ACK: 'ACK:2' to 2
+Rank: 3, Parent: 1, depth: 2, visited: 0,1,3
+Rank: 3, Notifying 2
+Rank: 3, Sending size: 3 to Parent 2
+Rank: 2, ACK recieved from 1
+Rank: 2, Notifying 4
+Rank: 2, Sending size: 2 to Parent 4

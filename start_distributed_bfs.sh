@@ -18,12 +18,13 @@ if [ "$run_type" == "cluster" ]; then
     # Running on the Slurm cluster
     echo "Running on the Slurm cluster..."
     echo "Running distributed BFS with $num_tasks MPI tasks and tree_depth $tree_depth..."
-    srun -n $num_tasks --mpi=pmi2 ./out/mpi_distributed_bfs $tree_depth >> $output_file
+    srun -n $num_tasks --mpi=pmi2 ./out/mpi_distributed_bfs $tree_depth #>> $output_file
 elif [ "$run_type" == "local" ]; then
     # Running locally
+    make all 
     echo "Running locally..."
     echo "Running distributed BFS with $num_tasks MPI tasks and tree_depth $tree_depth..."
-    mpirun -np $num_tasks ./out/mpi_distributed_bfs $tree_depth >> $output_file
+    mpirun -np $num_tasks ./out/mpi_distributed_bfs $tree_depth #>> $output_file
 else
     echo "Invalid run type. Use 'local' or 'cluster'."
     exit 1

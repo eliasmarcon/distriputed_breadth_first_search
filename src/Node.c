@@ -17,7 +17,6 @@ void printChildren(struct Node *node, int rank)
         {
             struct Node *child = children[i];
             printChild(child, i);
-            children++;
         }
         //   printf("Rank: %d, %d\n", children->rank);
     }
