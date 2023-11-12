@@ -1,20 +1,26 @@
 ======================= Output Start ======================
 ===================== Distributed BFS =====================
-Number of processes: 10
-Max Depth: 5
-Time taken: 0.122436
-Total Messages sent: 63
+Number of processes: 16
+Max Depth: 2
+Time taken: 4.460408
+Total Messages sent: 105
 Full Graph:
 Root Node: 0, Depth: 0, Parent: 0, Children: 2
 0
-|── 1
-    |── 4
-        └── 9
-    └── 3
+|── 2
+    |── 5
+        |── 11
+        └── 12
+    └── 6
+        |── 13
+        └── 14
+└── 1
+    |── 3
         |── 7
+            └── 15
         └── 8
-└── 2
-    |── 6
-    └── 5
+    └── 4
+        |── 9
+        └── 10
 ======================= Output End ========================
 

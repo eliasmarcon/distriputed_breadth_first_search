@@ -2,7 +2,7 @@
 
 Implement a distributed breadth-first search algorithm in MPI, to traverse a tree. If the max depth is exceeded, the program will switch to a depth-first search.
 
-One important remark: DFS only reduces the parallelism of the algorithm, but does not change the amount of messages sent in total. Overall DFS can be slower, but helps to save switch resource.
+One important remark: DFS only reduces the parallelism of the algorithm, but does not change the amount of messages sent in total. Overall DFS can be slower, but helps to save switch resources.
 
 ## Flow chart of DBFS
 
@@ -53,7 +53,7 @@ Root --8. Received--> Root
 
 - `./out`: contains the executable file `mpi_distributed_bfs` for the distributed breadth-first search created through the build process
 
-- `Makefile` : configuration file that controls the build process of the MPI program (contains rules and commands to compile the project and create the executable file `mpi_floodmax` and `mpi_optimized_floodmax`)
+- `Makefile`: configuration file that controls the build process of the MPI program (contains rules and commands to compile the project and create the executable file `mpi_floodmax` and `mpi_optimized_floodmax`)
 
 - `start_distributed_bfs.sh`: automates the execution of the `make all` command and MPI program (distributed breadth-first) with a user-specified number of processes and max depth (saves the results of the run in the output file `distributed_bfs_results.txt` for monitoring and analysis)
 
@@ -70,7 +70,7 @@ Root --8. Received--> Root
 
 ### Build
 
-- make all command is included in the start_distirbuted_bfs.sh file
+- the `make all` command is included in the `start_distirbuted_bfs.sh` file
 
 ### Usage
 
@@ -80,19 +80,19 @@ To use the provided Bash script for running the distributed breadth-first search
 
 2. Open a terminal and navigate to the directory containing this bash script.
 
-3. Run the bash script by providing the run_type (cluster, local), the number of MPI tasks and the desired max depth as command-line arguments.
+3. Run the bash script by providing the run_type (cluster, local), the number of MPI tasks and the desired max depth before switching to DFS as command-line arguments.
 
 - Default Parameters:
   - run_type = local
   - number of tasks = 5
-  - max depth = 10
+  - max depth = 5
 
 ```sh
 ./start_distributed_bfs.sh <run_type> <number_of_tasks> <max_depth> (replace `<run_type>` `<number_of_tasks>` and `<max_depth>` with the actual values)
 
 ./start_distributed_bfs.sh local 5 5
 
-./start_distributed_bfs.sh cluster 10 10
+./start_distributed_bfs.sh cluster 10 8
 
 ```
 

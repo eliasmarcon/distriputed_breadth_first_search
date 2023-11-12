@@ -443,7 +443,7 @@ int main(int argc, char *argv[])
         printf("======================= Output Start ======================\n");
         printf("===================== Distributed BFS =====================\n");
         printf("Number of processes: %d\n", size);
-        printf("Max Depth: %d\n", bfsdepth);
+        printf("Max Depth before switching to DFS: %d\n", bfsdepth);
         printf("Time taken: %f\n", ((double)time) / CLOCKS_PER_SEC);
         printf("Total Messages sent: %d\n", sumCalls);
         printf("Full Graph:\n");
