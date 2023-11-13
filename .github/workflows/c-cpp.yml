@@ -25,7 +25,7 @@ jobs:
         mkdir artifacts
         cp out/* artifacts/
         cp Makefile artifacts/
-        cp ReadMe.md artifacts/
+        cp README.md artifacts/
       shell: bash
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v2
