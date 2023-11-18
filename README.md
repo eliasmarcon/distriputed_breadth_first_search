@@ -53,7 +53,7 @@ Root --8. Received--> Root
 
 - `./out`: contains the executable file `mpi_distributed_bfs` for the distributed breadth-first search created through the build process
 
-- `Makefile`: configuration file that controls the build process of the MPI program (contains rules and commands to compile the project and create the executable file `mpi_floodmax` and `mpi_optimized_floodmax`)
+- `Makefile`: configuration file that controls the build process of the MPI program (contains rules and commands to compile the project and create the executable file `mpi_distributed_bfs`)
 
 - `start_distributed_bfs.sh`: automates the execution of the `make all` command and MPI program (distributed breadth-first) with a user-specified number of processes and max depth (saves the results of the run in the output file `distributed_bfs_results.txt` for monitoring and analysis)
 
